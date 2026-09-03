@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DBFly
 
-## Getting Started
+A browser-based SQL playground powered by [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview). Write and run SQL entirely in the browser — data never leaves your machine.
 
-First, run the development server:
+## Features
+
+- **In-memory DuckDB engine** — full SQL support, multi-statement queries, `EXPLAIN` / `EXPLAIN ANALYZE`
+- **SQL editor** (Monaco) — syntax highlighting, autocomplete for keywords, functions, tables, columns and CTEs, plus snippets
+- **Data import** — CSV and JSON files with automatic column type inference (INTEGER, DOUBLE, BOOLEAN, DATE, TIMESTAMP, VARCHAR, …); `NULL` values are preserved
+- **Data export** — query results to CSV or JSON, or copy as TSV
+- **Schema explorer** — tables, columns, primary/foreign keys and an interactive ER diagram
+- **Results table** — pagination, sorting, resizable columns and faithful rendering of DuckDB types (including BIGINT/HUGEINT/DECIMAL precision)
+- **Query history** — saved locally in `localStorage` (max 50 entries)
+- **Themes** — light, dark and system; editor height, font size and panel widths persist between sessions
+
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command             | Description                    |
+| ------------------- | ------------------------------ |
+| `npm run dev`       | Start the development server   |
+| `npm run build`     | Production build               |
+| `npm start`         | Serve the production build     |
+| `npm test`          | Run the Vitest suite           |
+| `npm run test:watch`| Run tests in watch mode        |
+| `npm run lint`      | Run ESLint                     |
 
-## Learn More
+## Tech stack
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Next.js (App Router) · React · Tailwind CSS · DuckDB-Wasm · Monaco Editor · Radix UI · Vitest + Testing Library
