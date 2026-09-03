@@ -1,6 +1,20 @@
 import type { editor, languages } from "monaco-editor";
 import type { SchemaInfo } from "@/engine/types";
 
+// Live schema seen by the completion provider.
+//
+// The provider is registered once per page lifetime (see sql-editor.tsx), so
+// it must NOT be bound to a single editor instance's React ref — that ref goes
+// stale when the editor remounts (StrictMode double-mount, Diagram view
+// toggle) and table suggestions would silently stop appearing. Instead the
+// mounted editor pushes the latest schema here on every change.
+let currentSchema: SchemaInfo | null = null;
+
+/** Update the schema used by completion providers registered without an explicit getter. */
+export function setCompletionSchema(schema: SchemaInfo | null): void {
+  currentSchema = schema;
+}
+
 /** SQL keywords */
 const SQL_KEYWORDS = [
   "SELECT", "FROM", "WHERE", "AND", "OR", "NOT", "IN", "BETWEEN",
@@ -218,7 +232,7 @@ function extractCteNames(fullSql: string): string[] {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function registerCompletionProvider(
   monaco: any,
-  getSchema: () => SchemaInfo | null,
+  getSchema?: () => SchemaInfo | null,
   languageId = "sql"
 ) {
   monaco.languages.registerCompletionItemProvider(languageId, {
@@ -227,7 +241,7 @@ export function registerCompletionProvider(
       model: editor.ITextModel,
       position: { lineNumber: number; column: number }
     ): languages.CompletionList => {
-      const schema = getSchema();
+      const schema = getSchema ? getSchema() : currentSchema;
       const word = model.getWordUntilPosition(position);
       const range = {
         startLineNumber: position.lineNumber,

@@ -11,6 +11,7 @@ const mockEditor = {
   getModel: vi.fn().mockReturnValue({
     getLineCount: vi.fn().mockReturnValue(1),
     getLineMaxColumn: vi.fn().mockReturnValue(10),
+    getLanguageId: vi.fn().mockReturnValue("dbfly-sql"),
   }),
   setPosition: vi.fn(),
 };
@@ -19,6 +20,7 @@ const mockMonaco = {
   editor: {
     defineTheme: vi.fn(),
     setTheme: vi.fn(),
+    setModelLanguage: vi.fn(),
   },
   KeyMod: { CtrlCmd: 1 },
   KeyCode: { Enter: 3 },

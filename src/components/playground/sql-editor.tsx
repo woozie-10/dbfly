@@ -5,7 +5,7 @@ import Editor, { OnMount } from "@monaco-editor/react";
 import { useTheme } from "next-themes";
 import type { editor } from "monaco-editor";
 import type { SchemaInfo } from "@/engine/types";
-import { registerCompletionProvider } from "./sql-completion";
+import { registerCompletionProvider, setCompletionSchema } from "./sql-completion";
 import { registerSqlLanguage, SQL_LANGUAGE_ID } from "./sql-language";
 
 // Module-level guards — survive React Strict Mode double-mount / HMR.
@@ -46,13 +46,19 @@ export const SqlEditor = forwardRef<SqlEditorHandle, SqlEditorProps>(
     const monacoRef = useRef<typeof import("monaco-editor") | null>(null);
     const onRunQueryRef = useRef(onRunQuery);
     const isRunningRef = useRef(isRunning);
-    const schemaRef = useRef(schema);
-    schemaRef.current = schema;
 
     useEffect(() => {
       onRunQueryRef.current = onRunQuery;
       isRunningRef.current = isRunning;
     }, [onRunQuery, isRunning]);
+
+    // Push the latest schema into the completion provider. The provider is
+    // registered once per page and must not be bound to this instance's ref:
+    // after a remount (StrictMode, Diagram view toggle) it would keep serving
+    // the old instance's stale schema and table suggestions would disappear.
+    useEffect(() => {
+      setCompletionSchema(schema);
+    }, [schema]);
 
     // Sync Monaco theme when resolvedTheme changes
     useEffect(() => {
@@ -90,9 +96,11 @@ export const SqlEditor = forwardRef<SqlEditorHandle, SqlEditorProps>(
         registerSqlLanguage(monaco);
         languageRegistered = true;
       }
-      // Register SQL completion provider against the same language id
+      // Register SQL completion provider against the same language id.
+      // No schema getter: it reads the module-level schema that the mounted
+      // editor keeps up to date via setCompletionSchema().
       if (!providerRegistered) {
-        registerCompletionProvider(monaco, () => schemaRef.current, SQL_LANGUAGE_ID);
+        registerCompletionProvider(monaco, undefined, SQL_LANGUAGE_ID);
         providerRegistered = true;
       }
     }, []);
@@ -100,6 +108,13 @@ export const SqlEditor = forwardRef<SqlEditorHandle, SqlEditorProps>(
     const handleEditorMount: OnMount = (editor, monaco) => {
       editorInstanceRef.current = editor;
       monacoRef.current = monaco;
+
+      // Safety net: make sure the model is tokenized/completed by our language
+      // even if the language registration raced with model creation.
+      const model = editor.getModel();
+      if (model && model.getLanguageId() !== SQL_LANGUAGE_ID) {
+        monaco.editor.setModelLanguage(model, SQL_LANGUAGE_ID);
+      }
 
       // Register Ctrl/Cmd+Enter
       editor.addAction({

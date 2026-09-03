@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { registerCompletionProvider } from "@/components/playground/sql-completion";
+import {
+  registerCompletionProvider,
+  setCompletionSchema,
+} from "@/components/playground/sql-completion";
 import type { SchemaInfo } from "@/engine/types";
 
 // Mock Monaco editor
@@ -88,6 +91,7 @@ describe("SQL Completion Provider", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     monaco = createMockMonaco();
+    setCompletionSchema(null);
   });
 
   it("registers completion provider", () => {
@@ -266,6 +270,65 @@ describe("SQL Completion Provider", () => {
     );
     const unique = new Set(labels);
     expect(labels.length).toBe(unique.size);
+  });
+
+  it("registers provider without a getter and serves the live schema via setCompletionSchema", () => {
+    // Editor mounts with schema unknown — registered once, no getter
+    registerCompletionProvider(monaco, undefined, "sql");
+    providerCallback =
+      monaco.languages.registerCompletionItemProvider.mock.calls[0][1];
+
+    // No schema yet: no table suggestions
+    let result = providerCallback.provideCompletionItems(
+      createMockModel("SELECT * FROM "),
+      { lineNumber: 1, column: 15 }
+    );
+    expect(result.suggestions.map((s: any) => s.label)).not.toContain("users");
+
+    // Schema arrives (e.g. after DuckDB init / import) without re-registering
+    setCompletionSchema(mockSchema);
+    result = providerCallback.provideCompletionItems(
+      createMockModel("SELECT * FROM "),
+      { lineNumber: 1, column: 15 }
+    );
+    const labels = result.suggestions.map((s: any) => s.label);
+    expect(labels).toContain("users");
+    expect(labels).toContain("orders");
+  });
+
+  it("updates table suggestions after a schema change (remount scenario)", () => {
+    // Provider registered once, like the real SqlEditor does
+    registerCompletionProvider(monaco, undefined, "sql");
+    providerCallback =
+      monaco.languages.registerCompletionItemProvider.mock.calls[0][1];
+    setCompletionSchema(mockSchema);
+
+    // A later import/refresh replaces the schema with a new table
+    const afterImport: SchemaInfo = {
+      tables: [
+        {
+          name: "products",
+          columns: [
+            { name: "id", type: "INTEGER", nullable: false, isPrimaryKey: true },
+            { name: "title", type: "VARCHAR", nullable: true },
+          ],
+          foreignKeys: [],
+          rowCount: 10,
+        },
+      ],
+      relationships: [],
+    };
+    setCompletionSchema(afterImport);
+
+    const result = providerCallback.provideCompletionItems(
+      createMockModel("SELECT * FROM "),
+      { lineNumber: 1, column: 15 }
+    );
+    const labels = result.suggestions.map((s: any) => s.label);
+    expect(labels).toContain("products");
+    expect(labels).not.toContain("users");
+    // Keywords still work
+    expect(labels).toContain("SELECT");
   });
 
   it("handles null schema gracefully", () => {
